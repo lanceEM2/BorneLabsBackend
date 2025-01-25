@@ -16,6 +16,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     profile_picture = db.Column(db.String(255), default='default.jpg')
     bio = db.Column(db.Text, nullable=True)
+    socials = db.Column(db.String)
     no_of_ideas = db.Column(db.Integer, default=0)  # Count of no_of_ideas
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -33,8 +34,10 @@ class User(db.Model):
             "id": self.id,
             "first_name": self.first_name,
             "last_name": self.last_name,
+            'full_name': f"{self.first_name} {self.last_name}",
             "phone": self.phone,
             "username": self.username,
+            'socials': self.socials.split(',') if self.socials else [],  # Convert socials to list of URLs
             "email": self.email,
             "profile_picture": self.profile_picture,
             "bio": self.bio,
@@ -58,6 +61,17 @@ class Idea(db.Model):
 
     reviews = db.relationship('IdeaReview', backref='idea', lazy=True)
 
+    @property
+    def rate_aggregate(self):
+        """
+        Calculate the average rating of the agent based on the associated reviews.
+        Returns 0 if there are no reviews.
+        """
+        if not self.reviews:
+            return 0  # No reviews, average rating is 0
+        total_rating = sum(review.rating for review in self.reviews)
+        return round(total_rating / len(self.reviews))  # Rounded to the nearest whole number
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -69,6 +83,7 @@ class Idea(db.Model):
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
             "approvals_count": self.approvals_count,
+            'rate_average': self.rate_aggregate,
             "author": self.author.to_dict() if self.author else None
         }
 

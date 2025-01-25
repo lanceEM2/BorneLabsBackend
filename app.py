@@ -72,6 +72,12 @@ class Signup(Resource):
         if existing_contributor:
             return make_response(jsonify({'message': 'This email is already in use!'}), 409)
 
+        user_name = data['user_name']
+        existing_username = User.query.filter_by(username=user_name).first()
+
+        if existing_username:
+            return make_response(jsonify({'message': 'This username name is already in use!'}), 409)
+
         # Hash the password
         hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
 
@@ -87,15 +93,26 @@ class Signup(Resource):
         except Exception as e:
             return {'error': f'Error uploading image: {str(e)}'}, 500
 
+        # Handle socials
+        socials_raw = data.get('socials')  # May be None or a single string
+        socials_list = []
+
+        if socials_raw:
+            # Split by commas if input provided, otherwise initialize an empty list
+            socials_list = [s.strip() for s in socials_raw.split(',') if s.strip()]
+
+        socials_str = ','.join(socials_list)
+
         if user_type == 'contributor':
             new_user = User(
                 email=email,
                 first_name = data['first_name'],
                 last_name = data['last_name'],
                 phone = data['phone'],
-                username = data['username'],
+                username = user_name,
                 password_hash=hashed_password,
                 profile_picture = image_url,
+                socials=socials_str,
                 bio = data['bio']
             )
 
